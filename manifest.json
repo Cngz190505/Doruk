@@ -4,8 +4,8 @@
   "description": "Doruk Finans & Araçlar Uygulaması",
   "start_url": "/Doruk/",
   "display": "standalone",
-  "background_color": "#0e1623",
-  "theme_color": "#00d4ff",
+  "background_color": "#040810",
+  "theme_color": "#040810",
   "orientation": "portrait",
   "icons": [
     {
