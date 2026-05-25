@@ -9524,10 +9524,10 @@ window.addEventListener('DOMContentLoaded', function() {
         if (!banned) hideBanScreen();
       }
 
-      // Cihaz kontrolü — deviceId varsa
+      // Cihaz kontrolü — once() kullan, WiFi değişince tekrar tetiklenmesin
       if (deviceId) {
         var devKey = deviceId.replace(/[.#$\/\[\]]/g, '_');
-        db.ref('cihaz_banlar/' + devKey).on('value', function(snap) {
+        db.ref('cihaz_banlar/' + devKey).once('value', function(snap) {
           if (snap.exists()) { banned = true; showBanScreen(); }
           checked.device = true;
           onCheckDone();
@@ -9537,11 +9537,11 @@ window.addEventListener('DOMContentLoaded', function() {
         onCheckDone();
       }
 
-      // IP kontrolü
+      // IP kontrolü — once() kullan
       getIP(function(ip) {
         if (!ip) { checked.ip = true; onCheckDone(); return; }
         var ipK = ipKey(ip);
-        db.ref('ip_banlar/' + ipK).on('value', function(snap) {
+        db.ref('ip_banlar/' + ipK).once('value', function(snap) {
           if (snap.exists()) { banned = true; showBanScreen(); }
           checked.ip = true;
           onCheckDone();
