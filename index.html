@@ -12576,22 +12576,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginUser = localStorage.getItem('doruk_login_user');
   const appContainer = document.getElementById('appContainer');
   if (loginUser) {
-    // Oturum açık → splash göster, arka planda yükle
+    // Oturum açık → splash göster, animasyon bitince direkt uygulamaya geç
     window._autoSplashGoster();
-    // Güvenlik: Firebase 4 saniyeden uzun sürerse zorla kapat
-    var _splashSafety = setTimeout(function() {
+    setTimeout(function() {
       window._autoSplashGizle();
       if (appContainer) { appContainer.style.visibility = 'visible'; appContainer.style.opacity = '1'; }
-    }, 4000);
-    _loginBanKontrol(loginUser, function(banli) {
-      if (banli) { clearTimeout(_splashSafety); window._autoSplashGizle(); return; }
       _initApp(function() {
-        clearTimeout(_splashSafety);
-        window._autoSplashGizle();
-        if (appContainer) { appContainer.style.visibility = 'visible'; appContainer.style.opacity = '1'; }
         _globalBanDinle(loginUser);
       });
-    });
+    }, 1600);
   } else {
     const screen = document.getElementById('loginScreen');
     if (screen) screen.style.display = 'flex';
