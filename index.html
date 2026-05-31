@@ -19177,11 +19177,23 @@ window._loginMisafir = function() {
         var fpKey = fp.replace(/[.#$\/\[\]]/g,'_');
         db.ref('misafir_fingerprint_nick/' + fpKey).once('value', function(snapFp) {
           var fpNick = snapFp.exists() ? snapFp.val() : null;
-          if (fpNick) {
-            localStorage.setItem('doruk_misafir_nick', fpNick);
-            window._idbSet('doruk_misafir_nick', fpNick);
+          if (fpNick && db) {
+            // Silinmiş nick mi kontrol et
+            var _fpNickKey = fpNick.toLowerCase().replace(/[.#$\/\[\]]/g,'_');
+            db.ref('deleted_accounts/' + _fpNickKey).once('value', function(delSnap) {
+              if (delSnap.exists()) {
+                // Silinmiş — fingerprint kaydını temizle, yeni nick al
+                db.ref('misafir_fingerprint_nick/' + fpKey).remove();
+                cb(null);
+              } else {
+                localStorage.setItem('doruk_misafir_nick', fpNick);
+                window._idbSet('doruk_misafir_nick', fpNick);
+                cb(fpNick);
+              }
+            }, function() { cb(fpNick); });
+          } else {
+            cb(fpNick);
           }
-          cb(fpNick);
         }, function() { cb(null); });
       }, function() { cb(null); });
     });
@@ -19190,6 +19202,30 @@ window._loginMisafir = function() {
   _nickBelirleVeDevamEt(function(eskiNick) {
 
   if (eskiNick) {
+    // Silinmiş hesap mı kontrol et
+    if (db) {
+      var _eskiKey = eskiNick.toLowerCase().replace(/[.#$\/\[\]]/g,'_');
+      db.ref('deleted_accounts/' + _eskiKey).once('value', function(delSnap2) {
+        if (delSnap2.exists()) {
+          // Hesap silinmiş — localStorage temizle, yeni misafir olarak devam et
+          localStorage.removeItem('doruk_misafir_nick');
+          localStorage.removeItem('doruk_misafir_kredi');
+          window._idbSet && window._idbSet('doruk_misafir_nick', null);
+          _nickBelirleVeDevamEt(function() { /* yeni nick üretilecek */ });
+          // Yeni nick akışına geç
+          eskiNick = null;
+          _devamEt(null);
+          return;
+        }
+        _devamEt(eskiNick);
+      }, function() { _devamEt(eskiNick); });
+    } else { _devamEt(eskiNick); }
+    return;
+  }
+  _devamEt(eskiNick);
+
+  function _devamEt(eskiNick) {
+  if (eskiNick) {
     if (db) {
       var _enKey = eskiNick.toLowerCase().replace(/[.#$\/\[\]]/g,'_');
       // Önce önceki listener varsa kapat
@@ -19197,6 +19233,12 @@ window._loginMisafir = function() {
         try { window._misafirKrediListenerRef.off(); } catch(e) {}
         window._misafirKrediListenerRef = null;
       }
+      // kullanicilar tablosunda kayıt yoksa yeniden yaz (silinmiş olabilir)
+      db.ref('kullanicilar/' + _enKey).once('value', function(kulSnap) {
+        if (!kulSnap.exists()) {
+          db.ref('kullanicilar/' + _enKey).set({ kullanici: eskiNick, email: '— (misafir)', kayit: Date.now(), misafir: true, cihazId: cihazId });
+        }
+      }).catch(function(){});
       // localStorage'da kredi varsa HEMEN giriş yap, Firebase arka planda günceller
       var _cachedKredi = localStorage.getItem('doruk_misafir_kredi');
       if (_cachedKredi !== null) {
@@ -19326,6 +19368,7 @@ window._loginMisafir = function() {
   }
 
   kaydet(0);
+  } // _devamEt sonu
   }); // _nickBelirleVeDevamEt sonu
   }); // _cihazIdAyarla sonu
 };
