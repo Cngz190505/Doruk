@@ -11781,7 +11781,7 @@ window._adminPanelAc = function() {
             var kullanicilar = [];
             kulSnap.forEach(function(c) {
               var v = c.val();
-              if (v && v.kullanici) kullanicilar.push({ key: c.key, kullanici: v.kullanici, email: v.email||'—', kayit: v.kayit||null, misafir: !!v.misafir });
+              if (v && v.kullanici) kullanicilar.push({ key: c.key, kullanici: v.kullanici, email: v.email||'—', kayit: v.kayit||null, misafir: !!v.misafir, cihazId: v.cihazId||'' });
             });
 
             var content = document.getElementById('adminTabContent');
@@ -11812,7 +11812,7 @@ window._adminPanelAc = function() {
               var log = loglar[nickKey] || {};
               var banli = !!banlilar[nickKey];
               var susturlu = !!susturluler[nickKey];
-              var cihazId = nickCihazlar[nickKey];
+              var cihazId = (u.misafir && u.cihazId) ? u.cihazId : (nickCihazlar[nickKey] || '');
               var cihazBanli = cihazId ? !!cihazBanlar[cihazId.replace(/[.#$\/\[\]]/g,'_')] : false;
               var ip = nickIPlar[nickKey];
               var ipBanli = ip ? !!ipBanlar[ip.replace(/\./g,'_')] : false;
