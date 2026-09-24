@@ -42,6 +42,75 @@ function _loginDb() {
   return window.firebase.database();
 }
 
+// ── Google ile Giriş (WebView içinde çalışmayabilir — Google'ın kısıtlaması) ──
+window._googleIleGirisYap = function() {
+  var btn = document.getElementById('googleGirisBtn');
+  function setBtn(disabled, text) {
+    if (!btn) return;
+    btn.disabled = disabled;
+    btn.textContent = text;
+  }
+  function showErr(msg) {
+    _loginErr(msg);
+    setBtn(false, '🔴  Google ile Giriş Yap');
+  }
+  setBtn(true, '⏳ BAĞLANILIYOR...');
+
+  function devamEt() {
+    if (!window.firebase.apps || !window.firebase.apps.length) {
+      window.firebase.initializeApp({ apiKey:'AIzaSyCZk-OgjuuO8t4SNary0L2C8WyhyC8IWMA', authDomain:'doruk-sohbet.firebaseapp.com', databaseURL: _DORUK_DB_URL, projectId:'doruk-sohbet', storageBucket:'doruk-sohbet.firebasestorage.app', messagingSenderId:'155992007314', appId:'1:155992007314:web:3d7f16edd31774f60f3c4b' });
+    }
+    var provider = new window.firebase.auth.GoogleAuthProvider();
+    window.firebase.auth().signInWithPopup(provider).then(function(result) {
+      var user = result.user;
+      var adHam = (user.displayName || (user.email ? user.email.split('@')[0] : 'kullanici')).trim();
+      var kullaniciAdi = adHam.toLowerCase().replace(/[^a-z0-9ığüşöç_]+/gi, '_').replace(/^_+|_+$/g,'') || 'gkullanici';
+      var kulKey = kullaniciAdi.replace(/[.#$/\[\]]/g,'_');
+      var db = _loginDb();
+      if (!db) { showErr('Veritabanına bağlanılamadı.'); return; }
+      db.ref('kullanicilar/' + kulKey).once('value', function(snap) {
+        if (!snap.exists()) {
+          db.ref('kullanicilar/' + kulKey).set({ email: user.email || '', google: true, olusturma: Date.now() });
+        }
+        db.ref('banlar/' + kulKey).once('value', function(banSnap) {
+          if (banSnap.exists()) { showErr('🚫 Hesabınız yasaklandı. Giriş yapamazsınız.'); return; }
+          setBtn(false, '🔴  Google ile Giriş Yap');
+          _loginSuccess(kullaniciAdi);
+        });
+      });
+    }).catch(function(err) {
+      var kod = err && err.code ? err.code : '';
+      var mesaj = err && err.message ? err.message : String(err);
+      if (kod === 'auth/popup-blocked' || kod === 'auth/cancelled-popup-request') {
+        showErr('Popup engellendi, tekrar deneyin.');
+      } else if (mesaj.toLowerCase().indexOf('disallowed_useragent') !== -1 || kod === 'auth/operation-not-supported-in-this-environment') {
+        showErr('Bu uygulama içinden Google girişi desteklenmiyor. Kullanıcı adı/şifre ile devam edin.');
+      } else {
+        showErr('Google girişi başarısız: ' + mesaj);
+      }
+    });
+  }
+
+  if (!window.firebase || !window.firebase.auth) {
+    function loadFbScript(src, cb) {
+      var s = document.createElement('script');
+      s.src = src; s.onload = cb;
+      s.onerror = function() { showErr('Bağlantı hatası'); };
+      document.head.appendChild(s);
+    }
+    if (!window.firebase) {
+      loadFbScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js', function() {
+        loadFbScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js', devamEt);
+      });
+    } else {
+      loadFbScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js', devamEt);
+    }
+  } else {
+    devamEt();
+  }
+};
+// ── / Google ile Giriş ──
+
 // Şifre göster/gizle
 function toggleSifre(inputId, btnId) {
   var inp = document.getElementById(inputId);
