@@ -10,7 +10,19 @@
 
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('./sw.js').catch(function () {});
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(function (registration) {
+        // GitHub'a yeni dosya geldiğinde Service Worker'ı hemen kontrol et.
+        registration.update().catch(function () {});
+
+        // Yeni worker aktif olduğunda sayfayı bir kez yenile.
+        // Sonsuz yenileme olmaması için aynı açılışta yalnızca bir kez çalışır.
+        var refreshed = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (refreshed) return;
+          refreshed = true;
+          window.location.reload();
+        });
+      }).catch(function () {});
     });
   }
 
